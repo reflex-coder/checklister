@@ -1,7 +1,7 @@
 // public/runner.js
 const state = {
   checklists: [], checklist: null, runId: null,
-  runnerName: '', stepIndex: 0, responses: []
+  runnerName: '', stepIndex: 0, responses: [], answering: false
 };
 const SCREENS = ['screen-home','screen-name','screen-step','screen-complete'];
 
@@ -24,7 +24,7 @@ async function goHome() {
     el.innerHTML = '<p style="color:var(--muted);padding:20px 0;">No checklists yet. <a href="/admin" style="color:var(--accent);">Create one in admin</a></p>';
   } else {
     el.innerHTML = state.checklists.map(cl =>
-      `<div class="card" onclick="selectChecklist('${cl.id}')">
+      `<div class="card" onclick="selectChecklist('${esc(cl.id)}')">
         <div>
           <div class="card-name">${esc(cl.name)}</div>
           <div class="card-meta">${cl.step_count} step${cl.step_count !== 1 ? 's' : ''}</div>
@@ -45,16 +45,20 @@ async function selectChecklist(id) {
 }
 
 async function startRun() {
-  state.runnerName = document.getElementById('runner-name-input').value.trim();
-  state.stepIndex = 0;
-  state.responses = [];
-  const run = await fetch('/api/runs', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ checklist_id: state.checklist.id, runner_name: state.runnerName })
-  }).then(r => r.json());
-  state.runId = run.id;
-  showStep();
+  try {
+    state.runnerName = document.getElementById('runner-name-input').value.trim();
+    state.stepIndex = 0;
+    state.responses = [];
+    const run = await fetch('/api/runs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ checklist_id: state.checklist.id, runner_name: state.runnerName })
+    }).then(r => r.json());
+    state.runId = run.id;
+    showStep();
+  } catch (err) {
+    alert('Failed to start run. Please check your connection and try again.');
+  }
 }
 
 function showStep() {
@@ -84,16 +88,25 @@ function showStep() {
 }
 
 async function answer(ans) {
-  const step = state.checklist.steps[state.stepIndex];
-  const note = step.allow_note ? document.getElementById('note-input').value.trim() : '';
-  state.responses.push({ step_id: step.id, answer: ans, note: note, answered_at: new Date().toISOString() });
-  await fetch('/api/runs/' + state.runId, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ responses: state.responses })
-  });
-  state.stepIndex++;
-  showStep();
+  if (state.answering) return;
+  state.answering = true;
+  try {
+    const step = state.checklist.steps[state.stepIndex];
+    const note = step.allow_note ? document.getElementById('note-input').value.trim() : '';
+    state.responses.push({ step_id: step.id, answer: ans, note: note, answered_at: new Date().toISOString() });
+    await fetch('/api/runs/' + state.runId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ responses: state.responses })
+    });
+    state.stepIndex++;
+    showStep();
+  } catch (err) {
+    state.responses.pop();
+    alert('Failed to save answer. Please try again.');
+  } finally {
+    state.answering = false;
+  }
 }
 
 async function completeRun() {
