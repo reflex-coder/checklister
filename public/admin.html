@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checklister Admin</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body { background: var(--bg); }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 24px 20px 60px; }
+    .nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .nav-title { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+    .nav-link { font-size: 13px; color: var(--accent); background: none; border: none; cursor: pointer; font-family: var(--font); text-decoration: none; }
+    .sec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .sec-title { font-size: 16px; font-weight: 700; }
+    .box { background: var(--surface); border: 1.5px solid var(--border); border-radius: 16px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); padding: 12px 16px; border-bottom: 1px solid var(--border); }
+    td { padding: 13px 16px; border-bottom: 1px solid #1a1a22; font-size: 14px; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #16161e; }
+    .td-name { font-weight: 600; color: var(--text); }
+    .td-m { color: var(--muted); }
+    .acts { display: flex; gap: 10px; }
+    .act { font-size: 12px; color: var(--accent); background: none; border: none; cursor: pointer; font-family: var(--font); padding: 0; }
+    .act:hover { text-decoration: underline; }
+    .act.del { color: #ff5252; }
+    .ed-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .ed-foot { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; background: #0f0f13; }
+    .fg { display: flex; flex-direction: column; gap: 6px; }
+    .fg label { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+    .fg input, .fg textarea { background: #1a1a24; border: 1.5px solid var(--border); border-radius: 10px; color: var(--text); font-size: 15px; padding: 11px 14px; width: 100%; outline: none; font-family: var(--font); }
+    .fg input:focus, .fg textarea:focus { border-color: var(--accent); }
+    .fg textarea { font-family: 'SF Mono','Menlo',monospace; font-size: 13px; line-height: 1.8; resize: vertical; min-height: 160px; }
+    .hint { font-size: 11px; color: #333; }
+    .divider { height: 1px; background: var(--border); }
+    .step-opts { display: flex; flex-direction: column; gap: 6px; }
+    .sopt { background: #1a1a24; border: 1px solid #1e1e2a; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .sopt-text { font-size: 13px; color: #ccc; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tg { display: flex; gap: 14px; flex-shrink: 0; }
+    .tog { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); cursor: pointer; }
+    .tog input { accent-color: var(--accent); }
+    .ir { display: flex; gap: 8px; }
+    .btn-sm { padding: 8px 14px; font-size: 13px; border-radius: 8px; width: auto; }
+    .btn-outline { background: transparent; border: 1.5px solid var(--border); color: #888; }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .log-row { padding: 12px 16px; border-bottom: 1px solid #1a1a22; display: flex; gap: 10px; align-items: center; cursor: pointer; }
+    .log-row:last-child { border-bottom: none; }
+    .log-row:hover { background: #16161e; }
+    .log-dot { width: 8px; height: 8px; border-radius: 50%; background: #00c853; flex-shrink: 0; }
+    .log-dot.inc { background: var(--muted); }
+    .log-info { flex: 1; }
+    .log-name { font-size: 14px; font-weight: 600; }
+    .log-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .log-score { font-size: 13px; color: var(--muted); }
+    .log-detail { display: none; padding: 0 16px 14px 34px; background: #16161e; border-bottom: 1px solid #1a1a22; flex-direction: column; gap: 4px; }
+    .log-detail.open { display: flex; }
+    .log-detail-row { font-size: 12px; color: var(--muted); padding: 2px 0; line-height: 1.4; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav">
+    <div class="nav-title">Checklister Admin</div>
+    <a href="/" class="nav-link">Runner view</a>
+  </div>
+
+  <div id="view-list">
+    <div class="sec-header">
+      <div class="sec-title">Checklists</div>
+      <button class="btn btn-primary btn-sm" onclick="showEditor(null)">+ New Checklist</button>
+    </div>
+    <div class="box">
+      <table>
+        <thead><tr><th>Name</th><th>Steps</th><th>Runs</th><th>Notifications</th><th></th></tr></thead>
+        <tbody id="tbl"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="view-editor" class="hidden">
+    <div class="sec-header">
+      <div class="sec-title" id="ed-heading">New Checklist</div>
+      <button class="nav-link" onclick="showList()">Back</button>
+    </div>
+    <div class="box">
+      <div class="ed-body">
+        <div class="fg"><label>Checklist Name</label><input type="text" id="ed-name" placeholder="e.g. Battle Stations"></div>
+        <div class="fg"><label>Description (optional)</label><input type="text" id="ed-desc" placeholder="Shown on the home screen..."></div>
+        <div class="divider"></div>
+        <div class="fg">
+          <label>Steps — one per line</label>
+          <textarea id="ed-steps" placeholder="Type each step on its own line..." oninput="scheduleRegen()"></textarea>
+          <div class="hint">Each line becomes one step. Reorder by moving lines up or down.</div>
+        </div>
+        <div id="opts-wrap" class="hidden">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Per-step options</div>
+          <div class="step-opts" id="opts"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="fg"><label>Slack Webhook URL</label><input type="url" id="ed-slack" placeholder="https://hooks.slack.com/services/..."></div>
+        <div class="fg"><label>Notification Email</label><input type="email" id="ed-email" placeholder="you@example.com"></div>
+        <div class="divider"></div>
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Import / Export</div>
+          <div class="ir">
+            <button class="btn btn-outline btn-sm" onclick="exportJson()">Export JSON</button>
+            <button class="btn btn-outline btn-sm" onclick="importJson()">Import JSON</button>
+          </div>
+        </div>
+      </div>
+      <div class="ed-foot">
+        <button class="btn btn-outline btn-sm" onclick="showList()">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="saveChecklist()">Save Checklist</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-log" class="hidden">
+    <div class="sec-header">
+      <div class="sec-title" id="log-heading">Run Log</div>
+      <button class="nav-link" onclick="showList()">Back</button>
+    </div>
+    <div class="box" id="log-box"></div>
+  </div>
+</div>
+<script src="/admin.js"></script>
+</body>
+</html>

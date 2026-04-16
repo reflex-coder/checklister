@@ -1,0 +1,181 @@
+// public/admin.js
+var editingId = null, stepMeta = [], regenTimer = null;
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function g(id) { return document.getElementById(id); }
+function showV(id) {
+  ['view-list','view-editor','view-log'].forEach(function(x) { g(x).classList.add('hidden'); });
+  g(id).classList.remove('hidden');
+}
+
+async function showList() {
+  showV('view-list');
+  var lists = await fetch('/api/checklists').then(function(r) { return r.json(); });
+  var tbody = g('tbl');
+  if (!lists.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);padding:20px;">No checklists yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lists.map(function(cl) {
+    var notifs = [cl.slack_webhook_url ? 'Slack' : '', cl.notification_email ? 'Email' : ''].filter(Boolean).join(', ') || 'None';
+    return '<tr>' +
+      '<td class="td-name">' + esc(cl.name) + '</td>' +
+      '<td class="td-m">' + cl.step_count + '</td>' +
+      '<td class="td-m">' + cl.run_count + '</td>' +
+      '<td class="td-m">' + notifs + '</td>' +
+      '<td><div class="acts">' +
+        '<button class="act" onclick="editCl(\'' + esc(cl.id) + '\')">Edit</button>' +
+        '<button class="act" onclick="viewLog(\'' + esc(cl.id) + '\')">Runs</button>' +
+        '<button class="act del" onclick="deleteCl(\'' + esc(cl.id) + '\',\'' + esc(cl.name) + '\')">Delete</button>' +
+      '</div></td>' +
+      '</tr>';
+  }).join('');
+}
+
+async function showEditor(cl) {
+  editingId = cl ? cl.id : null;
+  g('ed-heading').textContent = cl ? ('Edit: ' + cl.name) : 'New Checklist';
+  g('ed-name').value = cl ? cl.name : '';
+  g('ed-desc').value = cl ? cl.description : '';
+  g('ed-slack').value = cl ? cl.slack_webhook_url : '';
+  g('ed-email').value = cl ? cl.notification_email : '';
+  if (cl && cl.steps.length) {
+    g('ed-steps').value = cl.steps.map(function(s) { return s.text; }).join('\n');
+    stepMeta = cl.steps.map(function(s) { return { allow_note: s.allow_note, skippable: s.skippable }; });
+  } else {
+    g('ed-steps').value = '';
+    stepMeta = [];
+  }
+  regenOpts();
+  showV('view-editor');
+}
+
+async function editCl(id) {
+  var cl = await fetch('/api/checklists/' + id).then(function(r) { return r.json(); });
+  showEditor(cl);
+}
+
+async function viewLog(id) {
+  var cl = await fetch('/api/checklists/' + id).then(function(r) { return r.json(); });
+  var runs = await fetch('/api/runs?checklist_id=' + id).then(function(r) { return r.json(); });
+  g('log-heading').textContent = 'Run Log: ' + cl.name;
+  var box = g('log-box');
+  if (!runs.length) {
+    box.innerHTML = '<div style="padding:20px;color:var(--muted);font-size:14px;">No runs yet.</div>';
+    showV('view-log');
+    return;
+  }
+  box.innerHTML = runs.map(function(run, i) {
+    var done = !!run.completed_at;
+    var yes = run.responses.filter(function(r) { return r.answer === 'yes'; }).length;
+    var detail = run.responses.map(function(r) {
+      var step = cl.steps.find(function(s) { return s.id === r.step_id; });
+      var icon = r.answer === 'yes' ? '&#10003;' : r.answer === 'no' ? '&#10007;' : '&ndash;';
+      var noteHtml = r.note ? ' <span style="color:#888;">(' + esc(r.note) + ')</span>' : '';
+      return '<div class="log-detail-row">' + icon + ' ' + esc(step ? step.text : r.step_id) + noteHtml + '</div>';
+    }).join('');
+    return '<div class="log-row" onclick="g(\'ld' + i + '\').classList.toggle(\'open\')">' +
+      '<div class="log-dot ' + (done ? '' : 'inc') + '"></div>' +
+      '<div class="log-info"><div class="log-name">' + esc(run.runner_name || 'Anonymous') + '</div>' +
+      '<div class="log-meta">' + new Date(run.started_at).toLocaleString() + '</div></div>' +
+      '<div class="log-score">' + (done ? yes + '/' + cl.steps.length : 'Abandoned') + '</div>' +
+      '</div>' +
+      '<div class="log-detail" id="ld' + i + '">' + detail + '</div>';
+  }).join('');
+  showV('view-log');
+}
+
+async function deleteCl(id, name) {
+  if (!confirm('Delete "' + name + '"? All run history will be lost.')) return;
+  await fetch('/api/checklists/' + id, { method: 'DELETE' });
+  showList();
+}
+
+function scheduleRegen() { clearTimeout(regenTimer); regenTimer = setTimeout(regenOpts, 400); }
+
+function regenOpts() {
+  var lines = g('ed-steps').value.split('\n').filter(function(l) { return l.trim(); });
+  while (stepMeta.length < lines.length) stepMeta.push({ allow_note: false, skippable: false });
+  stepMeta = stepMeta.slice(0, lines.length);
+  var wrap = g('opts-wrap'), opts = g('opts');
+  if (!lines.length) { wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden');
+  opts.innerHTML = lines.map(function(line, i) {
+    return '<div class="sopt">' +
+      '<div class="sopt-text">' + esc(line) + '</div>' +
+      '<div class="tg">' +
+        '<label class="tog"><input type="checkbox" ' + (stepMeta[i].allow_note ? 'checked' : '') + ' onchange="stepMeta[' + i + '].allow_note=this.checked"> Allow note</label>' +
+        '<label class="tog"><input type="checkbox" ' + (stepMeta[i].skippable ? 'checked' : '') + ' onchange="stepMeta[' + i + '].skippable=this.checked"> Skippable</label>' +
+      '</div></div>';
+  }).join('');
+}
+
+async function saveChecklist() {
+  var name = g('ed-name').value.trim();
+  if (!name) { alert('Name is required.'); return; }
+  var lines = g('ed-steps').value.split('\n').filter(function(l) { return l.trim(); });
+  var existingSteps = [];
+  if (editingId) {
+    existingSteps = (await fetch('/api/checklists/' + editingId).then(function(r) { return r.json(); })).steps;
+  }
+  var steps = lines.map(function(text, i) {
+    return {
+      id: existingSteps[i] ? existingSteps[i].id : generateId(),
+      text: text,
+      allow_note: stepMeta[i] ? !!stepMeta[i].allow_note : false,
+      skippable: stepMeta[i] ? !!stepMeta[i].skippable : false
+    };
+  });
+  var body = {
+    name: name,
+    description: g('ed-desc').value.trim(),
+    steps: steps,
+    slack_webhook_url: g('ed-slack').value.trim(),
+    notification_email: g('ed-email').value.trim()
+  };
+  var method = editingId ? 'PUT' : 'POST';
+  var url = editingId ? '/api/checklists/' + editingId : '/api/checklists';
+  await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  showList();
+}
+
+function generateId() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+function exportJson() {
+  var lines = g('ed-steps').value.split('\n').filter(function(l) { return l.trim(); });
+  var steps = lines.map(function(text, i) {
+    return { id: generateId(), text: text, allow_note: stepMeta[i] ? !!stepMeta[i].allow_note : false, skippable: stepMeta[i] ? !!stepMeta[i].skippable : false };
+  });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(steps, null, 2)], { type: 'application/json' }));
+  a.download = 'checklist-steps.json';
+  a.click();
+}
+
+function importJson() {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = function(e) {
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        var steps = JSON.parse(ev.target.result);
+        g('ed-steps').value = steps.map(function(s) { return s.text; }).join('\n');
+        stepMeta = steps.map(function(s) { return { allow_note: !!s.allow_note, skippable: !!s.skippable }; });
+        regenOpts();
+      } catch(err) { alert('Invalid JSON file.'); }
+    };
+    reader.readAsText(e.target.files[0]);
+  };
+  input.click();
+}
+
+showList();
