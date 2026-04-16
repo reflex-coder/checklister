@@ -22,7 +22,7 @@
     "dotenv": "^17.4.2",
     "express": "^4.22.1",
     "nodemailer": "^8.0.5",
-    "uuid": "^13.0.0"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "jest": "^30.3.0",
