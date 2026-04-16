@@ -4,11 +4,12 @@ const nodemailer = require('nodemailer');
 
 async function sendSlack(webhookUrl, text) {
   if (!webhookUrl) return;
-  await fetch(webhookUrl, {
+  const res = await fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text })
   });
+  if (!res.ok) throw new Error(`Slack webhook error: ${res.status}`);
 }
 
 async function sendEmail(toEmail, subject, html) {
