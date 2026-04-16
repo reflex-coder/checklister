@@ -2,7 +2,7 @@
 var editingId = null, stepMeta = [], regenTimer = null;
 
 function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function g(id) { return document.getElementById(id); }
 function showV(id) {
@@ -89,7 +89,8 @@ async function viewLog(id) {
 
 async function deleteCl(id, name) {
   if (!confirm('Delete "' + name + '"? All run history will be lost.')) return;
-  await fetch('/api/checklists/' + id, { method: 'DELETE' });
+  var res = await fetch('/api/checklists/' + id, { method: 'DELETE' });
+  if (!res.ok) { alert('Failed to delete checklist. Please try again.'); return; }
   showList();
 }
 
@@ -137,15 +138,13 @@ async function saveChecklist() {
   };
   var method = editingId ? 'PUT' : 'POST';
   var url = editingId ? '/api/checklists/' + editingId : '/api/checklists';
-  await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  var res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!res.ok) { alert('Failed to save checklist. Please try again.'); return; }
   showList();
 }
 
 function generateId() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    var r = Math.random() * 16 | 0;
-    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-  });
+  return crypto.randomUUID();
 }
 
 function exportJson() {
