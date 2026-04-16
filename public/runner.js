@@ -27,7 +27,7 @@ async function goHome() {
       `<div class="card" onclick="selectChecklist('${esc(cl.id)}')">
         <div>
           <div class="card-name">${esc(cl.name)}</div>
-          <div class="card-meta">${cl.step_count} step${cl.step_count !== 1 ? 's' : ''}</div>
+          <div class="card-meta">${cl.description ? esc(cl.description) + ' · ' : ''}${cl.step_count} step${cl.step_count !== 1 ? 's' : ''}</div>
         </div>
         <div class="card-arrow">›</div>
       </div>`
@@ -110,27 +110,31 @@ async function answer(ans) {
 }
 
 async function completeRun() {
-  await fetch('/api/runs/' + state.runId, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ responses: state.responses, completed_at: new Date().toISOString() })
-  });
-  document.getElementById('complete-title').textContent = state.checklist.name;
-  document.getElementById('complete-sub').textContent =
-    (state.runnerName || 'Anonymous') + ' · ' + state.responses.length + ' steps';
-  document.getElementById('response-list').innerHTML = state.responses.map(function(r) {
-    const step = state.checklist.steps.find(function(s) { return s.id === r.step_id; });
-    const icon = r.answer === 'yes' ? '&#x2713;' : r.answer === 'no' ? '&#x2717;' : '&ndash;';
-    const noteHtml = r.note ? '<div class="resp-note">' + esc(r.note) + '</div>' : '';
-    return '<div class="response-item"><div class="resp-icon">' + icon + '</div><div class="resp-body">' + esc(step ? step.text : r.step_id) + noteHtml + '</div></div>';
-  }).join('');
-  const notifs = [];
-  if (state.checklist.slack_webhook_url) notifs.push('Slack notified');
-  if (state.checklist.notification_email) notifs.push('Email sent');
-  document.getElementById('notif-status').innerHTML = notifs.map(function(n) {
-    return '<div class="notif">' + n + '</div>';
-  }).join('');
-  show('screen-complete');
+  try {
+    await fetch('/api/runs/' + state.runId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ responses: state.responses, completed_at: new Date().toISOString() })
+    });
+    document.getElementById('complete-title').textContent = state.checklist.name;
+    document.getElementById('complete-sub').textContent =
+      (state.runnerName || 'Anonymous') + ' · ' + state.responses.length + ' steps';
+    document.getElementById('response-list').innerHTML = state.responses.map(function(r) {
+      const step = state.checklist.steps.find(function(s) { return s.id === r.step_id; });
+      const icon = r.answer === 'yes' ? '&#x2713;' : r.answer === 'no' ? '&#x2717;' : '&ndash;';
+      const noteHtml = r.note ? '<div class="resp-note">' + esc(r.note) + '</div>' : '';
+      return '<div class="response-item"><div class="resp-icon">' + icon + '</div><div class="resp-body">' + esc(step ? step.text : r.step_id) + noteHtml + '</div></div>';
+    }).join('');
+    const notifs = [];
+    if (state.checklist.slack_webhook_url) notifs.push('Slack notified');
+    if (state.checklist.notification_email) notifs.push('Email sent');
+    document.getElementById('notif-status').innerHTML = notifs.map(function(n) {
+      return '<div class="notif">' + n + '</div>';
+    }).join('');
+    show('screen-complete');
+  } catch (err) {
+    alert('Failed to complete run. Please try again.');
+  }
 }
 
 goHome();
