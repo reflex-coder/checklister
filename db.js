@@ -2,8 +2,7 @@
 const Database = require('better-sqlite3');
 
 function createDb(dbPath) {
-  const path = dbPath || './data.db';
-  const db = new Database(path);
+  const db = new Database(dbPath || './data.db');
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.prepare(`CREATE TABLE IF NOT EXISTS checklists (
