@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Checklister</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="app">
+  <div id="screen-home" class="hidden">
+    <div class="header">
+      <div><div class="header-title">Checklister</div><div class="header-sub">Pick a checklist to run</div></div>
+      <button class="header-link" onclick="location.href='/admin'">Admin</button>
+    </div>
+    <div class="content"><div class="card-list" id="checklist-cards"></div></div>
+  </div>
+
+  <div id="screen-name" class="hidden">
+    <div class="header">
+      <div><div class="header-title" id="name-title"></div><div class="header-sub" id="name-sub"></div></div>
+      <button class="header-link" onclick="goHome()">✕</button>
+    </div>
+    <div class="content">
+      <div><div class="step-q">Who's running this?</div><div class="header-sub" style="margin-top:8px;">Optional</div></div>
+      <div class="field"><input type="text" id="runner-name-input" placeholder="Your name..." autocomplete="name"></div>
+      <div class="actions">
+        <button class="btn btn-primary" onclick="startRun()">Start</button>
+        <button class="btn btn-ghost" onclick="startRun()">Skip</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-step" class="hidden">
+    <div class="progress-bar"><div class="progress-fill" id="step-progress"></div></div>
+    <div class="header">
+      <div class="header-sub" id="step-label"></div>
+      <button class="header-link" onclick="goHome()">✕</button>
+    </div>
+    <div class="content">
+      <div class="step-q" id="step-question"></div>
+      <div class="field hidden" id="note-field">
+        <div class="field-label">Note (optional)</div>
+        <textarea id="note-input" placeholder="Add a note..."></textarea>
+      </div>
+      <div class="actions" id="step-actions"></div>
+    </div>
+  </div>
+
+  <div id="screen-complete" class="hidden">
+    <div class="header"><div class="header-title" id="complete-title"></div></div>
+    <div class="content" style="gap:14px;align-items:center;text-align:center;">
+      <div style="font-size:56px;">✅</div>
+      <div style="font-size:22px;font-weight:800;">Checklist Complete</div>
+      <div class="header-sub" id="complete-sub"></div>
+      <div class="summary-box" style="width:100%;text-align:left;"><div id="response-list"></div></div>
+      <div id="notif-status"></div>
+      <button class="btn btn-ghost" onclick="goHome()">Back to checklists</button>
+    </div>
+  </div>
+</div>
+<script src="/runner.js"></script>
+</body>
+</html>
