@@ -28,7 +28,14 @@ module.exports = function runsRouter(db, notify) {
     const result = { ...updated, responses: JSON.parse(updated.responses) };
     if (!wasComplete && completed_at) {
       const cl = db.prepare('SELECT * FROM checklists WHERE id=?').get(run.checklist_id);
-      notify({ ...cl, steps: JSON.parse(cl.steps) }, result).catch(err => console.error('notify error:', err));
+      if (cl) {
+        try {
+          Promise.resolve(notify({ ...cl, steps: JSON.parse(cl.steps) }, result))
+            .catch(err => console.error('notify error:', err));
+        } catch (err) {
+          console.error('notify error:', err);
+        }
+      }
     }
     res.json(result);
   });
