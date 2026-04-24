@@ -1,9 +1,10 @@
 // public/runner.js
 const state = {
   checklists: [], checklist: null, runId: null,
-  runnerName: '', stepIndex: 0, responses: [], answering: false
+  runnerName: '', stepIndex: 0, responses: [], answering: false,
+  listMode: false
 };
-const SCREENS = ['screen-home','screen-name','screen-step','screen-complete'];
+const SCREENS = ['screen-home','screen-name','screen-step','screen-list','screen-complete'];
 
 function show(id) {
   SCREENS.forEach(s => document.getElementById(s).classList.add('hidden'));
@@ -55,9 +56,31 @@ async function startRun() {
       body: JSON.stringify({ checklist_id: state.checklist.id, runner_name: state.runnerName })
     }).then(r => r.json());
     state.runId = run.id;
-    showStep();
+    if (state.listMode) { showListScreen(); } else { showStep(); }
   } catch (err) {
     alert('Failed to start run. Please check your connection and try again.');
+  }
+}
+
+function renderStepActions(step) {
+  var container = document.getElementById('step-actions');
+  container.textContent = '';
+  var noBtn = document.createElement('button');
+  noBtn.className = 'btn btn-no';
+  noBtn.onclick = function() { answer('no'); };
+  noBtn.textContent = '✗ ' + (step.no_label || 'No');
+  container.appendChild(noBtn);
+  var yesBtn = document.createElement('button');
+  yesBtn.className = 'btn btn-yes';
+  yesBtn.onclick = function() { answer('yes'); };
+  yesBtn.textContent = '✓ ' + (step.yes_label || 'Yes');
+  container.appendChild(yesBtn);
+  if (step.skippable) {
+    var skipBtn = document.createElement('button');
+    skipBtn.className = 'btn btn-ghost';
+    skipBtn.onclick = function() { answer('skip'); };
+    skipBtn.textContent = 'Skip';
+    container.appendChild(skipBtn);
   }
 }
 
@@ -77,13 +100,7 @@ function showStep() {
   } else {
     noteField.classList.add('hidden');
   }
-  const skipBtn = step.skippable
-    ? '<button class="btn btn-ghost" onclick="answer(\'skip\')">Skip</button>'
-    : '';
-  document.getElementById('step-actions').innerHTML =
-    '<button class="btn btn-no" onclick="answer(\'no\')">&#x2717; No</button>' +
-    '<button class="btn btn-yes" onclick="answer(\'yes\')">&#x2713; Yes</button>' +
-    skipBtn;
+  renderStepActions(step);
   show('screen-step');
 }
 
@@ -135,6 +152,103 @@ async function completeRun() {
   } catch (err) {
     alert('Failed to complete run. Please try again.');
   }
+}
+
+function setMode(isListMode) {
+  state.listMode = isListMode;
+  document.getElementById('mode-step').classList.toggle('active', !isListMode);
+  document.getElementById('mode-list').classList.toggle('active', isListMode);
+}
+
+function makeListItem(step, i) {
+  var item = document.createElement('div');
+  item.className = 'list-item';
+  item.id = 'list-item-' + i;
+
+  var txt = document.createElement('div');
+  txt.className = 'list-item-text';
+  txt.textContent = step.text;
+  item.appendChild(txt);
+
+  if (step.allow_note) {
+    var noteWrap = document.createElement('div');
+    noteWrap.className = 'list-note';
+    var noteArea = document.createElement('textarea');
+    noteArea.id = 'list-note-input-' + i;
+    noteArea.placeholder = 'Note (optional)...';
+    noteWrap.appendChild(noteArea);
+    item.appendChild(noteWrap);
+  }
+
+  var btns = document.createElement('div');
+  btns.className = 'list-item-btns';
+
+  var noBtn = document.createElement('button');
+  noBtn.className = 'btn-list-no';
+  noBtn.id = 'btn-no-' + i;
+  noBtn.textContent = '✗ ' + (step.no_label || 'No');
+  noBtn.onclick = (function(idx) { return function() { listAnswer(idx, 'no'); }; })(i);
+  btns.appendChild(noBtn);
+
+  var yesBtn = document.createElement('button');
+  yesBtn.className = 'btn-list-yes';
+  yesBtn.id = 'btn-yes-' + i;
+  yesBtn.textContent = '✓ ' + (step.yes_label || 'Yes');
+  yesBtn.onclick = (function(idx) { return function() { listAnswer(idx, 'yes'); }; })(i);
+  btns.appendChild(yesBtn);
+
+  if (step.skippable) {
+    var skipBtn = document.createElement('button');
+    skipBtn.className = 'btn-list-skip';
+    skipBtn.id = 'btn-skip-' + i;
+    skipBtn.textContent = 'Skip';
+    skipBtn.onclick = (function(idx) { return function() { listAnswer(idx, 'skip'); }; })(i);
+    btns.appendChild(skipBtn);
+  }
+
+  item.appendChild(btns);
+  return item;
+}
+
+function showListScreen() {
+  var steps = state.checklist.steps;
+  document.getElementById('list-label').textContent = state.checklist.name + ' · ' + steps.length + ' steps';
+  var container = document.getElementById('list-steps');
+  container.textContent = '';
+  steps.forEach(function(step, i) { container.appendChild(makeListItem(step, i)); });
+  updateListProgress();
+  show('screen-list');
+}
+
+async function listAnswer(stepIndex, ans) {
+  var step = state.checklist.steps[stepIndex];
+  var noteInput = document.getElementById('list-note-input-' + stepIndex);
+  var note = (step.allow_note && noteInput) ? noteInput.value.trim() : '';
+
+  var existing = state.responses.findIndex(function(r) { return r.step_id === step.id; });
+  var response = { step_id: step.id, answer: ans, note: note, answered_at: new Date().toISOString() };
+  if (existing >= 0) { state.responses[existing] = response; } else { state.responses.push(response); }
+
+  ['yes', 'no', 'skip'].forEach(function(a) {
+    var btn = document.getElementById('btn-' + a + '-' + stepIndex);
+    if (btn) btn.classList.toggle('selected', a === ans);
+  });
+
+  updateListProgress();
+
+  fetch('/api/runs/' + state.runId, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ responses: state.responses })
+  }).catch(function(err) { console.error('Save error:', err); });
+}
+
+function updateListProgress() {
+  var total = state.checklist.steps.length;
+  var answered = state.responses.length;
+  document.getElementById('list-progress').style.width = Math.round(answered / total * 100) + '%';
+  document.getElementById('list-counter').textContent = answered + ' of ' + total + ' answered';
+  document.getElementById('list-complete-btn').disabled = answered < total;
 }
 
 goHome();

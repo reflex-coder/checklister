@@ -42,3 +42,28 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
 .resp-note { font-size: 12px; color: var(--muted); margin-top: 3px; }
 .notif { font-size: 13px; color: #4caf50; }
 .hidden { display: none !important; }
+
+/* Mode toggle */
+.mode-toggle { display: flex; border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden; }
+.mode-btn { flex: 1; padding: 10px 12px; font-size: 13px; font-weight: 600; background: transparent; border: none; color: var(--muted); cursor: pointer; font-family: var(--font); transition: all 0.15s; }
+.mode-btn.active { background: var(--accent); color: #fff; }
+
+/* List screen layout */
+#screen-list { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.list-scroll { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.list-footer { padding: 14px 16px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 12px; background: var(--surface); flex-shrink: 0; }
+.list-counter { font-size: 12px; color: var(--muted); flex: 1; }
+.list-complete-btn { width: auto; padding: 12px 28px; }
+.list-complete-btn:disabled { opacity: 0.35; cursor: default; transform: none; }
+
+/* List items */
+.list-item { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--r); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.list-item-text { font-size: 15px; font-weight: 600; line-height: 1.3; }
+.list-item-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-list-yes, .btn-list-no, .btn-list-skip { padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--font); opacity: 0.35; transition: opacity 0.15s; }
+.btn-list-yes { background: var(--yes); color: var(--yes-text); border: none; }
+.btn-list-no { background: var(--surface); color: var(--text); border: 1.5px solid var(--border); }
+.btn-list-skip { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
+.btn-list-yes.selected, .btn-list-no.selected, .btn-list-skip.selected { opacity: 1; }
+.list-note textarea { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--font); font-size: 13px; padding: 8px 10px; resize: none; height: 60px; outline: none; }
+.list-note textarea:focus { border-color: var(--accent); }

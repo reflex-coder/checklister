@@ -51,7 +51,7 @@ async function showEditor(cl) {
   g('ed-email').value = cl ? cl.notification_email : '';
   if (cl && cl.steps.length) {
     g('ed-steps').value = cl.steps.map(function(s) { return s.text; }).join('\n');
-    stepMeta = cl.steps.map(function(s) { return { allow_note: s.allow_note, skippable: s.skippable }; });
+    stepMeta = cl.steps.map(function(s) { return { allow_note: s.allow_note, skippable: s.skippable, yes_label: s.yes_label || '', no_label: s.no_label || '' }; });
   } else {
     g('ed-steps').value = '';
     stepMeta = [];
@@ -112,7 +112,7 @@ function scheduleRegen() { clearTimeout(regenTimer); regenTimer = setTimeout(reg
 
 function regenOpts() {
   var lines = g('ed-steps').value.split('\n').filter(function(l) { return l.trim(); });
-  while (stepMeta.length < lines.length) stepMeta.push({ allow_note: false, skippable: false });
+  while (stepMeta.length < lines.length) stepMeta.push({ allow_note: false, skippable: false, yes_label: '', no_label: '' });
   stepMeta = stepMeta.slice(0, lines.length);
   var wrap = g('opts-wrap'), opts = g('opts');
   if (!lines.length) { wrap.classList.add('hidden'); return; }
@@ -142,7 +142,9 @@ async function saveChecklist() {
       id: existingSteps[i] ? existingSteps[i].id : generateId(),
       text: text,
       allow_note: stepMeta[i] ? !!stepMeta[i].allow_note : false,
-      skippable: stepMeta[i] ? !!stepMeta[i].skippable : false
+      skippable: stepMeta[i] ? !!stepMeta[i].skippable : false,
+      yes_label: stepMeta[i] ? (stepMeta[i].yes_label || '').trim() : '',
+      no_label: stepMeta[i] ? (stepMeta[i].no_label || '').trim() : ''
     };
   });
   var body = {
@@ -185,7 +187,7 @@ function importJson() {
       try {
         var steps = JSON.parse(ev.target.result);
         g('ed-steps').value = steps.map(function(s) { return s.text; }).join('\n');
-        stepMeta = steps.map(function(s) { return { allow_note: !!s.allow_note, skippable: !!s.skippable }; });
+        stepMeta = steps.map(function(s) { return { allow_note: !!s.allow_note, skippable: !!s.skippable, yes_label: s.yes_label || '', no_label: s.no_label || '' }; });
         regenOpts();
       } catch(err) { alert('Invalid JSON file.'); }
     };
@@ -193,5 +195,60 @@ function importJson() {
   };
   input.click();
 }
+
+function addLabelInputs() {
+  document.querySelectorAll('#opts .sopt').forEach(function(sopt, i) {
+    if (!stepMeta[i]) return;
+    var tg = sopt.querySelector('.tg');
+    var pair = document.createElement('div');
+    pair.className = 'lbl-pair';
+
+    var yesIn = document.createElement('input');
+    yesIn.className = 'lbl-in';
+    yesIn.type = 'text';
+    yesIn.placeholder = 'Yes';
+    yesIn.value = stepMeta[i].yes_label || '';
+    yesIn.addEventListener('input', (function(idx) {
+      return function() { stepMeta[idx].yes_label = this.value; };
+    })(i));
+
+    var noIn = document.createElement('input');
+    noIn.className = 'lbl-in';
+    noIn.type = 'text';
+    noIn.placeholder = 'No';
+    noIn.value = stepMeta[i].no_label || '';
+    noIn.addEventListener('input', (function(idx) {
+      return function() { stepMeta[idx].no_label = this.value; };
+    })(i));
+
+    pair.appendChild(yesIn);
+    pair.appendChild(noIn);
+    tg.insertBefore(pair, tg.firstChild);
+  });
+}
+
+function addBulkBar() {
+  var existing = document.getElementById('bulk-bar');
+  if (existing) existing.remove();
+  if (!document.querySelectorAll('#opts .sopt').length) return;
+  var bar = document.createElement('div');
+  bar.id = 'bulk-bar';
+  bar.className = 'bulk-bar';
+  [{ label: 'Allow note:', field: 'allow_note' }, { label: 'Skippable:', field: 'skippable' }].forEach(function(item, idx) {
+    if (idx) { var s = document.createElement('span'); s.style.marginLeft = '10px'; bar.appendChild(s); }
+    var lbl = document.createElement('span'); lbl.className = 'bulk-label'; lbl.textContent = item.label; bar.appendChild(lbl);
+    var on = document.createElement('button'); on.className = 'bulk-btn'; on.textContent = 'All on'; on.onclick = (function(f) { return function() { bulkSet(f, true); }; })(item.field); bar.appendChild(on);
+    var off = document.createElement('button'); off.className = 'bulk-btn'; off.textContent = 'All off'; off.onclick = (function(f) { return function() { bulkSet(f, false); }; })(item.field); bar.appendChild(off);
+  });
+  document.getElementById('opts').parentNode.insertBefore(bar, document.getElementById('opts'));
+}
+
+function bulkSet(field, value) {
+  stepMeta.forEach(function(m) { m[field] = value; });
+  regenOpts();
+}
+
+var _regenOpts = regenOpts;
+regenOpts = function() { _regenOpts(); addBulkBar(); addLabelInputs(); };
 
 showList();

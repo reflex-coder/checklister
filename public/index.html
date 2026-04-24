@@ -26,6 +26,10 @@
     <div class="content">
       <div><div class="step-q">Who's running this?</div><div class="header-sub" style="margin-top:8px;">Optional</div></div>
       <div class="field"><input type="text" id="runner-name-input" placeholder="Your name..." autocomplete="name"></div>
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="mode-step" onclick="setMode(false)">Step by step</button>
+        <button class="mode-btn" id="mode-list" onclick="setMode(true)">List view</button>
+      </div>
       <div class="actions">
         <button class="btn btn-primary" onclick="startRun()">Start</button>
         <button class="btn btn-ghost" onclick="startRun()">Skip</button>
@@ -46,6 +50,19 @@
         <textarea id="note-input" placeholder="Add a note..."></textarea>
       </div>
       <div class="actions" id="step-actions"></div>
+    </div>
+  </div>
+
+  <div id="screen-list" class="hidden">
+    <div class="progress-bar"><div class="progress-fill" id="list-progress"></div></div>
+    <div class="header">
+      <div class="header-sub" id="list-label"></div>
+      <button class="header-link" onclick="goHome()">✕</button>
+    </div>
+    <div class="list-scroll" id="list-steps"></div>
+    <div class="list-footer">
+      <div class="list-counter" id="list-counter"></div>
+      <button class="btn btn-primary list-complete-btn" id="list-complete-btn" onclick="completeRun()" disabled>Complete</button>
     </div>
   </div>
 
