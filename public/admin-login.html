@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Login — Checklister</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+  .login-wrap { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; gap:16px; }
+  .login-box { background:var(--surface); border-radius:12px; padding:32px; width:100%; max-width:360px; display:flex; flex-direction:column; gap:16px; box-sizing:border-box; }
+  .login-box h2 { margin:0; font-size:20px; }
+  .login-box input[type=password] { width:100%; padding:12px; background:var(--bg); border:1px solid #333; border-radius:8px; color:var(--text); font-size:16px; box-sizing:border-box; }
+  .login-box button { width:100%; padding:12px; background:var(--accent); border:none; border-radius:8px; color:#fff; font-size:16px; cursor:pointer; font-weight:600; }
+  .login-box button:active { opacity:0.85; }
+  .err { color:#e55; font-size:14px; text-align:center; min-height:20px; }
+</style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-box">
+    <h2>Admin Login</h2>
+    <input type="password" id="pw" placeholder="Password" autofocus>
+    <button onclick="login()">Sign in</button>
+    <div class="err" id="err"></div>
+  </div>
+</div>
+<script>
+  document.getElementById('pw').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') login();
+  });
+  async function login() {
+    var pw = document.getElementById('pw').value;
+    document.getElementById('err').textContent = '';
+    var res = await fetch('/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw })
+    });
+    if (res.ok) {
+      window.location.href = '/admin';
+    } else {
+      document.getElementById('err').textContent = 'Incorrect password.';
+      document.getElementById('pw').select();
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,6 +1,12 @@
 // public/admin.js
 var editingId = null, stepMeta = [], regenTimer = null;
 
+async function apiFetch(url, options) {
+  var res = await fetch(url, options);
+  if (res.status === 401) { window.location.href = '/admin/login'; return null; }
+  return res;
+}
+
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
@@ -12,7 +18,9 @@ function showV(id) {
 
 async function showList() {
   showV('view-list');
-  var lists = await fetch('/api/checklists').then(function(r) { return r.json(); });
+  var r = await apiFetch('/api/checklists');
+  if (!r) return;
+  var lists = await r.json();
   var tbody = g('tbl');
   if (!lists.length) {
     tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);padding:20px;">No checklists yet.</td></tr>';
@@ -53,13 +61,18 @@ async function showEditor(cl) {
 }
 
 async function editCl(id) {
-  var cl = await fetch('/api/checklists/' + id).then(function(r) { return r.json(); });
-  showEditor(cl);
+  var r = await apiFetch('/api/checklists/' + id);
+  if (!r) return;
+  showEditor(await r.json());
 }
 
 async function viewLog(id) {
-  var cl = await fetch('/api/checklists/' + id).then(function(r) { return r.json(); });
-  var runs = await fetch('/api/runs?checklist_id=' + id).then(function(r) { return r.json(); });
+  var r1 = await apiFetch('/api/checklists/' + id);
+  if (!r1) return;
+  var cl = await r1.json();
+  var r2 = await apiFetch('/api/runs?checklist_id=' + id);
+  if (!r2) return;
+  var runs = await r2.json();
   g('log-heading').textContent = 'Run Log: ' + cl.name;
   var box = g('log-box');
   if (!runs.length) {
@@ -89,7 +102,8 @@ async function viewLog(id) {
 
 async function deleteCl(id, name) {
   if (!confirm('Delete "' + name + '"? All run history will be lost.')) return;
-  var res = await fetch('/api/checklists/' + id, { method: 'DELETE' });
+  var res = await apiFetch('/api/checklists/' + id, { method: 'DELETE' });
+  if (!res) return;
   if (!res.ok) { alert('Failed to delete checklist. Please try again.'); return; }
   showList();
 }
@@ -119,7 +133,9 @@ async function saveChecklist() {
   var lines = g('ed-steps').value.split('\n').filter(function(l) { return l.trim(); });
   var existingSteps = [];
   if (editingId) {
-    existingSteps = (await fetch('/api/checklists/' + editingId).then(function(r) { return r.json(); })).steps;
+    var er = await apiFetch('/api/checklists/' + editingId);
+    if (!er) return;
+    existingSteps = (await er.json()).steps;
   }
   var steps = lines.map(function(text, i) {
     return {
@@ -138,7 +154,8 @@ async function saveChecklist() {
   };
   var method = editingId ? 'PUT' : 'POST';
   var url = editingId ? '/api/checklists/' + editingId : '/api/checklists';
-  var res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  var res = await apiFetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!res) return;
   if (!res.ok) { alert('Failed to save checklist. Please try again.'); return; }
   showList();
 }

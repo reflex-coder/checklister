@@ -2,7 +2,29 @@
 const { Router } = require('express');
 const { v4: uuidv4 } = require('uuid');
 
-module.exports = function checklistsRouter(db) {
+function validateChecklist(body) {
+  const { name, description = '', steps = [], slack_webhook_url = '', notification_email = '' } = body;
+  if (!name || typeof name !== 'string' || !name.trim()) return 'name is required';
+  if (name.length > 200) return 'name must be 200 characters or fewer';
+  if (typeof description !== 'string') return 'description must be a string';
+  if (description.length > 1000) return 'description must be 1000 characters or fewer';
+  if (!Array.isArray(steps)) return 'steps must be an array';
+  if (steps.length > 100) return 'steps must have 100 items or fewer';
+  for (let i = 0; i < steps.length; i++) {
+    const s = steps[i];
+    if (!s.text || typeof s.text !== 'string' || !s.text.trim()) return `step ${i + 1}: text is required`;
+    if (s.text.length > 500) return `step ${i + 1}: text must be 500 characters or fewer`;
+  }
+  if (slack_webhook_url && !slack_webhook_url.startsWith('https://')) {
+    return 'slack_webhook_url must start with https://';
+  }
+  if (notification_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(notification_email)) {
+    return 'notification_email must be a valid email address';
+  }
+  return null;
+}
+
+module.exports = function checklistsRouter(db, adminAuth = (req, res, next) => next()) {
   const router = Router();
 
   router.get('/', (req, res) => {
@@ -18,9 +40,10 @@ module.exports = function checklistsRouter(db) {
     }));
   });
 
-  router.post('/', (req, res) => {
+  router.post('/', adminAuth, (req, res) => {
+    const validationError = validateChecklist(req.body);
+    if (validationError) return res.status(400).json({ error: validationError });
     const { name, description = '', steps = [], slack_webhook_url = '', notification_email = '' } = req.body;
-    if (!name) return res.status(400).json({ error: 'name is required' });
     const id = uuidv4();
     db.prepare(`INSERT INTO checklists (id,name,description,steps,slack_webhook_url,notification_email)
       VALUES (?,?,?,?,?,?)`)
@@ -35,9 +58,10 @@ module.exports = function checklistsRouter(db) {
     res.json({ ...row, steps: JSON.parse(row.steps) });
   });
 
-  router.put('/:id', (req, res) => {
+  router.put('/:id', adminAuth, (req, res) => {
+    const validationError = validateChecklist(req.body);
+    if (validationError) return res.status(400).json({ error: validationError });
     const { name, description = '', steps = [], slack_webhook_url = '', notification_email = '' } = req.body;
-    if (!name) return res.status(400).json({ error: 'name is required' });
     if (!db.prepare('SELECT id FROM checklists WHERE id=?').get(req.params.id))
       return res.status(404).json({ error: 'not found' });
     db.prepare(`UPDATE checklists SET name=?,description=?,steps=?,slack_webhook_url=?,notification_email=?,updated_at=datetime('now') WHERE id=?`)
@@ -46,7 +70,7 @@ module.exports = function checklistsRouter(db) {
     res.json({ ...row, steps: JSON.parse(row.steps) });
   });
 
-  router.delete('/:id', (req, res) => {
+  router.delete('/:id', adminAuth, (req, res) => {
     if (!db.prepare('SELECT id FROM checklists WHERE id=?').get(req.params.id))
       return res.status(404).json({ error: 'not found' });
     db.prepare('DELETE FROM checklists WHERE id=?').run(req.params.id);

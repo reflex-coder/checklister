@@ -63,3 +63,50 @@ test('DELETE /:id deletes checklist', async () => {
   expect((await request(app).delete(`/api/checklists/${cl.id}`)).status).toBe(204);
   expect((await request(app).get(`/api/checklists/${cl.id}`)).status).toBe(404);
 });
+
+test('POST rejects name over 200 characters', async () => {
+  const res = await request(app).post('/api/checklists').send({ name: 'a'.repeat(201) });
+  expect(res.status).toBe(400);
+  expect(res.body.error).toMatch(/200/);
+});
+
+test('POST rejects steps that is not an array', async () => {
+  const res = await request(app).post('/api/checklists').send({ name: 'Test', steps: 'invalid' });
+  expect(res.status).toBe(400);
+  expect(res.body.error).toMatch(/array/);
+});
+
+test('POST rejects step with empty text', async () => {
+  const res = await request(app).post('/api/checklists').send({
+    name: 'Test',
+    steps: [{ id: 's1', text: '   ', allow_note: false, skippable: false }]
+  });
+  expect(res.status).toBe(400);
+  expect(res.body.error).toMatch(/text is required/);
+});
+
+test('POST rejects slack_webhook_url not starting with https://', async () => {
+  const res = await request(app).post('/api/checklists').send({
+    name: 'Test', slack_webhook_url: 'http://hooks.slack.com/bad'
+  });
+  expect(res.status).toBe(400);
+  expect(res.body.error).toMatch(/https/);
+});
+
+test('POST rejects invalid notification_email', async () => {
+  const res = await request(app).post('/api/checklists').send({
+    name: 'Test', notification_email: 'not-an-email'
+  });
+  expect(res.status).toBe(400);
+  expect(res.body.error).toMatch(/email/);
+});
+
+test('POST accepts valid checklist with all optional fields', async () => {
+  const res = await request(app).post('/api/checklists').send({
+    name: 'Valid',
+    steps: [{ id: 's1', text: 'Do the thing', allow_note: false, skippable: false }],
+    slack_webhook_url: 'https://hooks.slack.com/valid',
+    notification_email: 'user@example.com'
+  });
+  expect(res.status).toBe(201);
+});
