@@ -16,7 +16,7 @@ const errorHandler = require('./middleware/errorHandler');
 const app = express();
 const db = createDb(process.env.DB_PATH || './data.db');
 
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json());
 app.use(cookieParser());
