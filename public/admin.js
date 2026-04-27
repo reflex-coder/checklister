@@ -206,7 +206,7 @@ function addLabelInputs() {
     var yesIn = document.createElement('input');
     yesIn.className = 'lbl-in';
     yesIn.type = 'text';
-    yesIn.placeholder = 'Yes';
+    yesIn.placeholder = 'Check';
     yesIn.value = stepMeta[i].yes_label || '';
     yesIn.addEventListener('input', (function(idx) {
       return function() { stepMeta[idx].yes_label = this.value; };
@@ -215,7 +215,7 @@ function addLabelInputs() {
     var noIn = document.createElement('input');
     noIn.className = 'lbl-in';
     noIn.type = 'text';
-    noIn.placeholder = 'No';
+    noIn.placeholder = 'No (leave blank to hide)';
     noIn.value = stepMeta[i].no_label || '';
     noIn.addEventListener('input', (function(idx) {
       return function() { stepMeta[idx].no_label = this.value; };

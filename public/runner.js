@@ -65,15 +65,17 @@ async function startRun() {
 function renderStepActions(step) {
   var container = document.getElementById('step-actions');
   container.textContent = '';
-  var noBtn = document.createElement('button');
-  noBtn.className = 'btn btn-no';
-  noBtn.onclick = function() { answer('no'); };
-  noBtn.textContent = '✗ ' + (step.no_label || 'No');
-  container.appendChild(noBtn);
+  if (step.no_label) {
+    var noBtn = document.createElement('button');
+    noBtn.className = 'btn btn-no';
+    noBtn.onclick = function() { answer('no'); };
+    noBtn.textContent = '✗ ' + step.no_label;
+    container.appendChild(noBtn);
+  }
   var yesBtn = document.createElement('button');
   yesBtn.className = 'btn btn-yes';
   yesBtn.onclick = function() { answer('yes'); };
-  yesBtn.textContent = '✓ ' + (step.yes_label || 'Yes');
+  yesBtn.textContent = '✓ ' + (step.yes_label || 'Check');
   container.appendChild(yesBtn);
   if (step.skippable) {
     var skipBtn = document.createElement('button');
@@ -183,17 +185,19 @@ function makeListItem(step, i) {
   var btns = document.createElement('div');
   btns.className = 'list-item-btns';
 
-  var noBtn = document.createElement('button');
-  noBtn.className = 'btn-list-no';
-  noBtn.id = 'btn-no-' + i;
-  noBtn.textContent = '✗ ' + (step.no_label || 'No');
-  noBtn.onclick = (function(idx) { return function() { listAnswer(idx, 'no'); }; })(i);
-  btns.appendChild(noBtn);
+  if (step.no_label) {
+    var noBtn = document.createElement('button');
+    noBtn.className = 'btn-list-no';
+    noBtn.id = 'btn-no-' + i;
+    noBtn.textContent = '✗ ' + step.no_label;
+    noBtn.onclick = (function(idx) { return function() { listAnswer(idx, 'no'); }; })(i);
+    btns.appendChild(noBtn);
+  }
 
   var yesBtn = document.createElement('button');
   yesBtn.className = 'btn-list-yes';
   yesBtn.id = 'btn-yes-' + i;
-  yesBtn.textContent = '✓ ' + (step.yes_label || 'Yes');
+  yesBtn.textContent = '✓ ' + (step.yes_label || 'Check');
   yesBtn.onclick = (function(idx) { return function() { listAnswer(idx, 'yes'); }; })(i);
   btns.appendChild(yesBtn);
 
