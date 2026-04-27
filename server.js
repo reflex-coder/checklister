@@ -22,7 +22,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.get('/health', (req, res) =>
-  res.json({ status: 'ok', uptime: process.uptime() }));
+  res.json({ status: 'ok', uptime: process.uptime(), db: process.env.DB_PATH || './data.db' }));
 
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
