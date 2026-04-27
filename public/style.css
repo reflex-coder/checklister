@@ -67,3 +67,4 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
 .btn-list-yes.selected, .btn-list-no.selected, .btn-list-skip.selected { opacity: 1; }
 .list-note textarea { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; color: var(--text); font-family: var(--font); font-size: 13px; padding: 8px 10px; resize: none; height: 60px; outline: none; }
 .list-note textarea:focus { border-color: var(--accent); }
+.step-q a, .list-item-text a { color: var(--accent); text-decoration: underline; word-break: break-all; }

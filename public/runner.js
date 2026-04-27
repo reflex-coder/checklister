@@ -62,6 +62,22 @@ async function startRun() {
   }
 }
 
+function renderLinkedText(text, container) {
+  var parts = text.split(/(https?:\/\/[^\s]+)/);
+  parts.forEach(function(part) {
+    if (/^https?:\/\//.test(part)) {
+      var a = document.createElement('a');
+      a.href = part;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.textContent = part;
+      container.appendChild(a);
+    } else if (part) {
+      container.appendChild(document.createTextNode(part));
+    }
+  });
+}
+
 function renderStepActions(step) {
   var container = document.getElementById('step-actions');
   container.textContent = '';
@@ -94,7 +110,9 @@ function showStep() {
   document.getElementById('step-progress').style.width = pct + '%';
   document.getElementById('step-label').textContent =
     state.checklist.name + ' · Step ' + (state.stepIndex + 1) + ' of ' + steps.length;
-  document.getElementById('step-question').textContent = step.text;
+  var q = document.getElementById('step-question');
+  q.textContent = '';
+  renderLinkedText(step.text, q);
   const noteField = document.getElementById('note-field');
   if (step.allow_note) {
     noteField.classList.remove('hidden');
@@ -169,7 +187,7 @@ function makeListItem(step, i) {
 
   var txt = document.createElement('div');
   txt.className = 'list-item-text';
-  txt.textContent = step.text;
+  renderLinkedText(step.text, txt);
   item.appendChild(txt);
 
   if (step.allow_note) {
